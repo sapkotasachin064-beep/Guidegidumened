@@ -356,7 +356,6 @@ const il2cpp_api = {
             const el = document.getElementById(id)
             if (el) el.scrollIntoView({ behavior: 'smooth' })
         }
-        
         // Copy whole page as HTML file
         function copyWholePage() {
             const html = document.documentElement.outerHTML
@@ -372,4 +371,136 @@ const il2cpp_api = {
         
         // Toggle step completion with localStorage
         function toggleComplete(step) {
-            const car
+            const card = document.getElementById(`step-${step}`)
+            card.classList.toggle('!border-emerald-400')
+            card.querySelector('span:last-child').textContent = card.classList.contains('!border-emerald-400') ? '🎉' : '✅'
+            
+            // Persist
+            let done = JSON.parse(localStorage.getItem('dumpSteps') || '[]')
+            if (done.includes(step)) done = done.filter(s => s !== step)
+            else done.push(step)
+            localStorage.setItem('dumpSteps', JSON.stringify(done))
+        }
+        
+        function markAllDone() {
+            for (let i = 1; i <= 3; i++) {
+                const card = document.getElementById(`step-${i}`)
+                if (card) {
+                    card.classList.add('!border-emerald-400')
+                    card.querySelector('span:last-child').textContent = '🎉'
+                }
+            }
+            localStorage.setItem('dumpSteps', JSON.stringify([1,2,3]))
+        }
+        
+        // Script preview logic (real full script from blog)
+        let currentOffsets = {
+            offset1: "0x00588610",
+            offset2: "0x00a1a7e0",
+            offset3: "0x00a1a7f0"
+        }
+        
+        const baseScript = `const DUMP_FOLDER = "D:/dump";
+const DUMP_CS_FILE = DUMP_FOLDER + "/dump.cs";
+
+let file = new File(DUMP_CS_FILE, "w");
+
+const il2cpp_base = Process.findModuleByName("GenshinImpact.exe").base;
+
+const il2cpp_api = {
+  il2cpp_MetadataCache_GetTypeInfoFromTypeDefinitionIndex: {{OFFSET1}},
+  il2cpp_class_get_name: {{OFFSET2}},
+  il2cpp_class_get_namespace: {{OFFSET3}},
+};
+
+const il2cpp_MetadataCache_GetTypeInfoFromTypeDefinitionIndex =
+  new NativeFunction(
+    il2cpp_base.add(il2cpp_api["il2cpp_MetadataCache_GetTypeInfoFromTypeDefinitionIndex"]),
+    "pointer",
+    ["int"],
+  );
+const il2cpp_class_get_name = new NativeFunction(
+  il2cpp_base.add(il2cpp_api["il2cpp_class_get_name"]),
+  "pointer",
+  ["pointer"],
+);
+const il2cpp_class_get_namespace = new NativeFunction(
+  il2cpp_base.add(il2cpp_api["il2cpp_class_get_namespace"]),
+  "pointer",
+  ["pointer"],
+);
+
+function dump_csharp() {
+  console.log("Start dumping...");
+  for (let i = 0; ; i++) {
+    let klass;
+    try {
+      klass = il2cpp_MetadataCache_GetTypeInfoFromTypeDefinitionIndex(i);
+    } catch (error) {
+      console.log("Finished dumping. Stopping...");
+      break;
+    }
+
+    let class_name = il2cpp_class_get_name(klass).readCString();
+    let class_namespace = il2cpp_class_get_namespace(klass).readCString();
+
+    file.write("// TypedefIndex: " + i + "\\n");
+    file.write("// Namespace: " + class_namespace + "\\n");
+    file.write(class_name);
+    file.write("\\n\\n");
+  }
+  file.flush();
+  file.close();
+  console.log("Dumped successfully, saved at " + DUMP_CS_FILE);
+}
+
+dump_csharp();`
+
+        function updateScriptPreview() {
+            currentOffsets.offset1 = document.getElementById('offset1').value.trim() || "0x00588610"
+            currentOffsets.offset2 = document.getElementById('offset2').value.trim() || "0x00a1a7e0"
+            currentOffsets.offset3 = document.getElementById('offset3').value.trim() || "0x00a1a7f0"
+            
+            let rendered = baseScript
+                .replace("{{OFFSET1}}", currentOffsets.offset1)
+                .replace("{{OFFSET2}}", currentOffsets.offset2)
+                .replace("{{OFFSET3}}", currentOffsets.offset3)
+            
+            document.getElementById('script-preview').textContent = rendered
+        }
+        
+        function copyScript() {
+            const code = document.getElementById('script-preview').textContent
+            navigator.clipboard.writeText(code).then(() => {
+                const orig = event.currentTarget.innerHTML
+                event.currentTarget.innerHTML = `<i class="fa-solid fa-check"></i> COPIED!`
+                setTimeout(() => {
+                    event.currentTarget.innerHTML = orig
+                }, 2000)
+            })
+        }
+        
+        function copyRunCommand() {
+            const cmd = `cd D:\\dump\nfrida -f "C:\\Program Files\\HoYoPlay\\games\\Genshin Impact game\\GenshinImpact.exe" -l rumi.js --no-pause`
+            navigator.clipboard.writeText(cmd).then(() => alert('✅ Command copied to clipboard!'))
+        }
+        
+        // Load saved steps on start
+        window.onload = function() {
+            const done = JSON.parse(localStorage.getItem('dumpSteps') || '[]')
+            done.forEach(step => {
+                const card = document.getElementById(`step-${step}`)
+                if (card) {
+                    card.classList.add('!border-emerald-400')
+                    card.querySelector('span:last-child').textContent = '🎉'
+                }
+            })
+            
+            // Initial script preview
+            updateScriptPreview()
+            
+            console.log('%c🚀 Modern Genshin Dump Website ready!', 'color:#22d3ee; font-size:13px; font-family:monospace')
+        }
+    </script>
+</body>
+</html>
